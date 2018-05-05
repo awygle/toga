@@ -1,3 +1,4 @@
+import asyncio
 import sys
 
 import toga
@@ -10,6 +11,13 @@ class MainWindow(Window):
     def on_close(self):
         pass
 
+async def _tick_windows(loop, form):
+    WinForms.Application.RegisterMessageLoop(WinForms.Application.MessageLoopCallback(loop.is_running))
+    form.Visible = True
+    while not form.IsDisposed:
+        WinForms.Application.DoEvents()
+        await asyncio.sleep(0)
+    loop.stop()
 
 class App:
     _MAIN_WINDOW_CLASS = MainWindow
@@ -17,6 +25,10 @@ class App:
     def __init__(self, interface):
         self.interface = interface
         self.interface._impl = self
+
+        self.loop = asyncio.get_event_loop()
+
+        self.create()
 
     def create(self):
         self.native = WinForms.Application
@@ -32,6 +44,7 @@ class App:
 
         # Call user code to populate the main window
         self.interface.startup()
+        self.loop.create_task(_tick_windows(self.loop, self.interface.main_window._impl.native))
         self._menu_items = {}
         self.create_menus()
         self.interface.main_window._impl.native.Icon = \
@@ -70,15 +83,8 @@ class App:
         '''Add a new document to this app.'''
         print("STUB: If you want to handle opening documents, implement App.open_document(fileURL)")
 
-    def run_app(self):
-        self.create()
-        self.native.Run(self.interface.main_window._impl.native)
-
     def main_loop(self):
-        thread = Threading.Thread(Threading.ThreadStart(self.run_app))
-        thread.SetApartmentState(Threading.ApartmentState.STA)
-        thread.Start()
-        thread.Join()
+        self.loop.run_forever()
 
     def exit(self):
-        self.native.Exit()
+        self.loop.close()
