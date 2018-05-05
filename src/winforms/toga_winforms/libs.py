@@ -1,5 +1,8 @@
 from toga.constants import LEFT, RIGHT, CENTER, JUSTIFY
 
+import pythoncom
+pythoncom.CoInitialize()
+
 import clr
 clr.AddReference("System.Windows.Forms")
 
